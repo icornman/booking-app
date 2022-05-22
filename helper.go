@@ -1,12 +1,25 @@
 package main
 
-import (
-	"strings"
+import "fmt"
+
+var (
+	Info = Color("\033[1;36m%s\033[0m")
+	Warn = Color("\033[1;33m%s\033[0m")
+	Fata = Color("\033[1;31m%s\033[0m")
 )
 
-func validateUserInput(firstName string, lastName string, email string, userTickets uint) (bool, bool, bool) {
-	isValidName := len(firstName) >= 2 && len(lastName) >= 2
-	isValidEmail := strings.Contains(email, "@")
-	isValidTicketNumber := userTickets > 0 && userTickets <= remainingTickets
-	return isValidName, isValidEmail, isValidTicketNumber
+func Color(colorString string) func(...interface{}) string {
+	sprint := func(args ...interface{}) string {
+		return fmt.Sprintf(colorString,
+			fmt.Sprint(args...))
+	}
+	return sprint
+}
+
+func getFirstNames() []string {
+	var firstNames []string
+	for _, booking := range bookings {
+		firstNames = append(firstNames, booking.firstName)
+	}
+	return firstNames
 }
