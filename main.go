@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"github.com/joho/godotenv"
+	"log"
+	"net/smtp"
+	"os"
 )
 
 const conferenceName = "Go Conference"
@@ -19,6 +22,12 @@ type UserData struct {
 }
 
 func main() {
+	// load .env file
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal(Fata("Error loading .env file"))
+	}
+
 	greetUsers()
 
 	for remainingTickets > 0 && len(bookings) < 50 {
@@ -34,19 +43,19 @@ func main() {
 
 			if remainingTickets == 0 {
 				// end program
-				fmt.Println("Our conference is booked out. Come back next year.")
+				fmt.Println(Info("Our conference is booked out. Come back next year."))
 				break
 			}
 		} else {
-			fmt.Println("Failed validation:")
+			fmt.Println(Warn("Failed validation:"))
 			if !isValidName {
-				fmt.Println("- first name or last name you entered is too short")
+				fmt.Println(Warn("- first name or last name you entered is too short"))
 			}
 			if !isValidEmail {
-				fmt.Println("- email address you entered doesn't contain @ sign")
+				fmt.Println(Warn("- email address you entered doesn't contain @ sign"))
 			}
 			if !isValidTicketNumber {
-				fmt.Println("- number of tickets you entered is invalid")
+				fmt.Println(Warn("- number of tickets you entered is invalid"))
 			}
 			fmt.Println("Try again...")
 		}
@@ -75,16 +84,16 @@ func getUserInput() (string, string, string, uint) {
 
 	// ask user for their input
 	fmt.Println("Enter your first name: ")
-	fmt.Scan(&firstName)
+	_, _ = fmt.Scan(&firstName)
 
 	fmt.Println("Enter your last name: ")
-	fmt.Scan(&lastName)
+	_, _ = fmt.Scan(&lastName)
 
 	fmt.Println("Enter your email address: ")
-	fmt.Scan(&email)
+	_, _ = fmt.Scan(&email)
 
 	fmt.Println("Enter number of tickets: ")
-	fmt.Scan(&userTickets)
+	_, _ = fmt.Scan(&userTickets)
 
 	return firstName, lastName, email, userTickets
 }
@@ -107,9 +116,18 @@ func bookTicket(userTickets uint, firstName string, lastName string, email strin
 }
 
 func sendTicket(userTickets uint, firstName string, lastName string, email string) {
-	time.Sleep(10 * time.Second)
-	var ticket = fmt.Sprintf("%v tickets for %v %v", userTickets, firstName, lastName)
-	fmt.Println("##########################")
-	fmt.Printf("Sending ticket: \n %v \nto email address %v\n", ticket, email)
-	fmt.Println("##########################")
+	auth := smtp.PlainAuth("", os.Getenv("MAIL_USERNAME"), os.Getenv("MAIL_PASSWORD"), os.Getenv("MAIL_HOST"))
+
+	to := []string{email}
+	from := os.Getenv("MAIL_FROM_ADDRESS")
+	msg := []byte(
+		fmt.Sprintf("From: %v\n", from) +
+			fmt.Sprintf("To: %v\n", email) +
+			fmt.Sprintf("Subject: '%v' tickets\n\n", conferenceName) +
+			fmt.Sprintf("%v tickets for %v %v\n", userTickets, firstName, lastName))
+
+	err := smtp.SendMail(fmt.Sprintf("%v:%v", os.Getenv("MAIL_HOST"), os.Getenv("MAIL_PORT")), auth, from, to, msg)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
